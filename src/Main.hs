@@ -4,10 +4,13 @@ import System.Environment (getArgs)
 import System.IO
 import Control.Exception (bracket, handle, SomeException)
 import qualified System.IO.Strict as Strict
+import qualified Transaction as T
 
 import CSV (csv, Doc, csvContents, HeaderP(..))
 import Scheme (selectScheme)
 import Text.ParserCombinators.Parsec
+import Data.List (sort)
+
 
 parseTransactions :: HeaderP -> FilePath -> IO (Maybe (Either ParseError Doc))
 parseTransactions hasHeader path = handle handler $ do
@@ -32,4 +35,6 @@ main = do
       print e
     Just (Right r) -> case selectScheme path of
       Nothing -> putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
-      Just scheme -> mapM_ print (map scheme (csvContents r))
+      Just scheme -> do
+        let transactions = sort $ map scheme (csvContents r)
+        mapM_ print (T.balance' 0 $ T.sumBy T.date transactions)

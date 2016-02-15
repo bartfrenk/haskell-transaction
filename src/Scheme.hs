@@ -6,6 +6,7 @@ import System.FilePath.Posix (takeFileName)
 import Data.List (isInfixOf)
 import Data.Time (Day, readTime)
 import System.Locale (defaultTimeLocale)
+import Data.Decimal ((*.), Decimal)
 
 type AList k v = [(k, v)]
 type Scheme = Row -> T.Transaction
@@ -17,15 +18,15 @@ replace old new text = map substitute text
 triodos :: Scheme
 triodos row = T.Transaction destination (m * amount) time Nothing
   where destination = row ! 1
-        amount = read (replace ',' '.' (row ! 2)) :: Double
-        m = if (row ! 3 == "Debet") then (-1) else 1
+        amount = read (replace ',' '.' (row ! 2)) :: Decimal
+        m = if (row ! 3 == "Debet") then (-1) else 1 :: Decimal
         time = readTime defaultTimeLocale "%d-%m-%Y" (row ! 0) :: Day
 
 rabobank :: Scheme
 rabobank row = T.Transaction destination (m * amount) time Nothing
   where destination = row ! 0
-        amount = read (row ! 4) :: Double
-        m = if (row ! 3 == "D") then (-1) else 1
+        amount = read (row ! 4) :: Decimal
+        m = if (row ! 3 == "D") then (-1) else 1 :: Decimal
         time = readTime defaultTimeLocale "%Y%m%d" (row ! 2) :: Day
 
 schemes :: AList String Scheme
