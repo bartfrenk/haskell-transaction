@@ -1,15 +1,20 @@
 import System.Environment (getArgs)
 
---import Transaction as T
+import Graphics.Rendering.Chart.Easy
+import Graphics.Rendering.Chart.Backend.Cairo
+
 import System.IO
 import Control.Exception (bracket, handle, SomeException)
 import qualified System.IO.Strict as Strict
-import qualified Transaction as T
 
-import CSV (csv, Doc, csvContents, HeaderP(..))
-import Scheme (selectScheme)
 import Text.ParserCombinators.Parsec
 import Data.List (sort)
+
+import CSV (csv, Doc, csvContents, HeaderP(..))
+import Transaction
+import Scheme (selectScheme)
+import Utils (gather, accumulate, showLines)
+import Data.Map.Lazy (toList)
 
 
 parseTransactions :: HeaderP -> FilePath -> IO (Maybe (Either ParseError Doc))
@@ -22,6 +27,12 @@ parseTransactions hasHeader path = handle handler $ do
 
 wrap :: [a] -> [a] -> [a]
 wrap xs ys = xs ++ ys ++ xs
+
+fileOptions :: FileOptions
+fileOptions = FileOptions {
+  _fo_size = (800, 600),
+  _fo_format = SVG
+  }
 
 main :: IO ()
 main = do
@@ -37,4 +48,8 @@ main = do
       Nothing -> putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
       Just scheme -> do
         let transactions = sort $ map scheme (csvContents r)
-        mapM_ print (T.balance' 0 $ T.sumBy T.date transactions)
+        showLines $ toList (gather trDest trAmount transactions)
+        showLines $ toList (gather trMonth trAmount transactions)
+        showLines $ toList (gather trYear trAmount transactions)
+        toFile fileOptions "plot.svg" $
+          plot (line "balance" [(accumulate trDate trAmount transactions)])
