@@ -1,5 +1,5 @@
 module Utils
-       ( loadTransactions, gather, accumulate )
+       ( loadTransactions, gather, accumulate, showLines, LoadError(..) )
        where
 
 import System.IO hiding (hGetContents)

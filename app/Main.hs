@@ -24,17 +24,17 @@ main = do
   (path:_) <- getArgs
   result <- loadTransactions path
   case result of
-    Nothing -> do
+    Left FileNotFound -> do
       putStrLn ("Could not open file " ++ wrap "'" path ++ ".")
-    Just (Left e) -> do
+    Left (InvalidCSV err) -> do
       putStrLn ("Unable to parse " ++ wrap "'" path ++ ".")
-      print e
-    Just (Right r) -> case selectScheme path of
-      Nothing -> putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
-      Just scheme -> do
-        let transactions = sort $ map (schemeMap scheme) (csvContents r)
-        showLines $ toList (gather trDest trAmount transactions)
-        showLines $ toList (gather trMonth trAmount transactions)
-        showLines $ toList (gather trYear trAmount transactions)
-        toFile fileOptions "plot.svg" $
-          plot (line "balance" [(accumulate trDate trAmount transactions)])
+      print err
+    Left (UnknownScheme) -> do
+      putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
+    Right ts' -> do
+      let ts = sort ts'
+      showLines $ toList (gather trDest trAmount ts)
+      showLines $ toList (gather trMonth trAmount ts)
+      showLines $ toList (gather trYear trAmount ts)
+      let balance = plot (line "balance" [(accumulate trDate trAmount ts)])
+      toFile fileOptions "plot.svg" balance
