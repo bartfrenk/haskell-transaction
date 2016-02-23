@@ -18,21 +18,21 @@ showLines :: (Show a) => [a] -> IO ()
 showLines = mapM_ (putStrLn . show)
 
 data LoadError = FileNotFound | InvalidCSV ParseError | UnknownScheme
-               deriving (Show)
+               deriving (Show, Eq)
 
 injectNothingAs :: LoadError -> Maybe a -> Either LoadError a
-injectNothingAs e Nothing = Left e
+injectNothingAs err Nothing = Left err
 injectNothingAs _ (Just x) = Right x
 
-injectParseResult :: Either ParseError a -> Either LoadError a
-injectParseResult (Left e) = Left $ InvalidCSV e
-injectParseResult (Right x) = Right x
+injectErrorAs :: (e -> LoadError) -> Either e a -> Either LoadError a
+injectErrorAs f (Left err) = Left $ f err
+injectErrorAs _ (Right x) = Right x
 
 loadTransactions :: FilePath -> IO (Either LoadError [Transaction])
-loadTransactions path = fmap (join . (parseTransactions' <$> scheme' <*>)) input'
-  where scheme' = injectNothingAs UnknownScheme $ selectScheme path
-        input' = injectNothingAs FileNotFound <$> loadFile path
-        parseTransactions' scheme input = injectParseResult (parseTransactions scheme input)
+loadTransactions path = fmap (join . (parseTs <$> scheme <*>)) input
+  where scheme = injectNothingAs UnknownScheme $ selectScheme path
+        input = injectNothingAs FileNotFound <$> loadFile path
+        parseTs sch inp = injectErrorAs InvalidCSV (parseTransactions sch inp)
 
 -- |Reads data from specified file immediately
 loadFile :: FilePath -> IO (Maybe String)
