@@ -13,7 +13,6 @@ import Control.Monad (join)
 
 import Transaction (Transaction, ParseError, parseTransactions, selectScheme)
 
-
 showLines :: (Show a) => [a] -> IO ()
 showLines = mapM_ (putStrLn . show)
 

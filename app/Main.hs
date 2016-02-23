@@ -24,12 +24,11 @@ main = do
   (path:_) <- getArgs
   result <- loadTransactions path
   case result of
-    Left FileNotFound -> do
+    Left FileNotFound ->
       putStrLn ("Could not open file " ++ wrap "'" path ++ ".")
-    Left (InvalidCSV err) -> do
-      putStrLn ("Unable to parse " ++ wrap "'" path ++ ".")
-      print err
-    Left (UnknownScheme) -> do
+    Left (InvalidCSV err) ->
+      putStrLn ("Unable to parse " ++ wrap "'" path ++ ".") >> print err
+    Left UnknownScheme ->
       putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
     Right ts' -> do
       let ts = sort ts'
