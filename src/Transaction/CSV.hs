@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-module CSV (Row, (!), Doc, csv, parseCSV, csvHeader, csvContents, HeaderP(..)) where
+module Transaction.CSV
+       ( ParseError, Row, Doc, HeaderP(..), (!), csv, parseCSV, csvHeader, csvContents,  )
+       where
 
 import Text.ParserCombinators.Parsec
 

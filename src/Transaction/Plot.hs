@@ -1,6 +1,8 @@
-module Plot (transformAxisData) where
+module Transaction.Plot
+       ( transformAxisData )
+       where
 
-import Graphics.Rendering.Chart.Axis.Types (AxisData(..))
+import Graphics.Rendering.Chart.Axis.Types
 
 transformAxisData :: (AxisData a) -> (a -> b) -> (b -> a) -> AxisData b
 transformAxisData axisData injection section = AxisData {
