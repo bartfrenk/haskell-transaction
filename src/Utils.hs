@@ -2,13 +2,11 @@ module Utils
        ( loadTransactions, gather, accumulate, showLines, LoadError(..) )
        where
 
-import System.IO hiding (hGetContents)
+import System.IO (openFile, IOMode(ReadMode), hClose)
 import System.IO.Strict (hGetContents)
 import Control.Exception (bracket, handle, SomeException)
 import Data.Map.Lazy (empty, alter, Map)
 import Data.List (sortOn)
-
-import Control.Applicative (liftA2)
 import Control.Monad (join)
 
 import Transaction (Transaction, ParseError, parseTransactions, selectScheme)

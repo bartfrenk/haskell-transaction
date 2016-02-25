@@ -9,9 +9,10 @@ import Graphics.Rendering.Chart.Axis.Types
 import Graphics.Rendering.Chart.Axis.LocalTime ()
 import Graphics.Rendering.Chart.Axis.Floating ()
 
-import Text.Read (Read(..))
 import Data.Decimal
+import Text.Read (Read(..))
 import Data.List (intercalate)
+import Numeric (showFFloat)
 
 import Transaction.Plot (transformAxisData)
 
@@ -20,11 +21,15 @@ type Category = String
 
 -- |Currency
 
-newtype Currency = Currency Decimal deriving (Eq, Ord, Show, Num)
+newtype Currency = Currency Decimal deriving (Eq, Ord, Num)
 
 instance Monoid Currency where
   mempty = Currency 0
   (Currency x) `mappend` (Currency y) = Currency (x + y)
+
+instance Show Currency where
+  -- Intermediate conversion to double might lead to rounding issues.
+  show curr = showFFloat (Just 2) (currencyToDouble curr) ""
 
 currencyToDouble :: Currency -> Double
 currencyToDouble (Currency decimal) = mantissa / 10 ^ places

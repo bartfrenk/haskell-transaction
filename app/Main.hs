@@ -1,14 +1,13 @@
 import System.Environment (getArgs)
 
-
 import Data.List (sort)
+import Data.Map.Lazy (toList)
 
 import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Backend.Cairo
-import Transaction
-import Data.Map.Lazy (toList)
-import Utils
 
+import Transaction
+import Utils
 
 wrap :: [a] -> [a] -> [a]
 wrap xs ys = xs ++ ys ++ xs
@@ -19,21 +18,32 @@ fileOptions = FileOptions {
   _fo_format = SVG
   }
 
-main :: IO ()
-main = do
-  (path:_) <- getArgs
-  result <- loadTransactions path
+
+parseArgs :: [String] -> Maybe (FilePath, FilePath)
+parseArgs (csvPath:plotPath:_) = Just (csvPath, plotPath)
+parseArgs _ = Nothing
+
+main' :: FilePath -> FilePath -> IO ()
+main' csvPath plotPath = do
+  result <- loadTransactions csvPath
   case result of
     Left FileNotFound ->
-      putStrLn ("Could not open file " ++ wrap "'" path ++ ".")
+      putStrLn ("Could not open file " ++ wrap "'" csvPath ++ ".")
     Left (InvalidCSV err) ->
-      putStrLn ("Unable to parse " ++ wrap "'" path ++ ".") >> print err
+      putStrLn ("Unable to parse " ++ wrap "'" csvPath ++ ".") >> print err
     Left UnknownScheme ->
-      putStrLn ("Unable to determine transaction format for " ++ wrap "'" path ++ ".")
+      putStrLn ("Unable to determine transaction format for " ++ wrap "'" csvPath ++ ".")
     Right ts' -> do
       let ts = sort ts'
       showLines $ toList (gather trDest trAmount ts)
       showLines $ toList (gather trMonth trAmount ts)
       showLines $ toList (gather trYear trAmount ts)
       let balance = plot (line "balance" [(accumulate trDate trAmount ts)])
-      toFile fileOptions "plot.svg" balance
+      toFile fileOptions plotPath balance
+
+main :: IO ()
+main = do
+  args <- parseArgs <$> getArgs
+  case args of
+    Nothing -> putStrLn "Usage: main <csv path> <plot path>"
+    Just (csvPath, plotPath) -> main' csvPath plotPath
