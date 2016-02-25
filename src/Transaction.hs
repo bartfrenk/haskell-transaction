@@ -1,5 +1,5 @@
 module Transaction
-    ( Transaction, ParseError, Scheme(..),
+    ( Account, Transaction, ParseError, Scheme(..),
       parseTransactions, selectScheme,
       trDest, trAmount, trDate, trCat, trMonth, trYear )
     where

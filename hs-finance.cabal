@@ -44,6 +44,19 @@ executable console
                      , Chart-cairo
   default-language:    Haskell2010
 
+executable gui
+  hs-source-dirs:      app
+  main-is:             GUI.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  build-depends:       base
+                     , hs-finance
+                     , containers
+                     , gtk3
+                     , mtl
+                     , Chart
+                     , Chart-cairo
+  default-language:    Haskell2010
+
 test-suite hs-finance-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test

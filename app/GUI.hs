@@ -1,27 +1,11 @@
-import Transaction (Account, Transaction)
-import CSV (HeaderP, csv, Doc)
-import Text.ParserCombinators.Parsec
-import System.IO
+import Transaction
+
 import Graphics.UI.Gtk
-import Control.Exception (bracket, handle, SomeException)
-import qualified System.IO.Strict as Strict
-import Control.Monad.Trans (liftIO)
-import Control.Monad (forM)
-import Control.Applicative ((<$>))
-import Data.Functor
-
-import Transaction (parseTransactions, selectScheme)
 import Graphics.UI.Gtk.ModelView as New
+import Control.Monad.Trans (liftIO)
 
-type AppState = ([Transaction], [Account])
-data AppError = FileNotFound FilePath
-              | UnknownFormat
-              | ParseError ParseError
+type GUIState = ([Transaction], [Account])
 
-data FunctorIO m a = IO (m a)
-
-instance (Functor m) => Functor (FunctorIO m) where
-  fmap f (IO x) = IO (fmap f x)
 
 {--
 adaptError :: (e -> e') -> Either e a -> Either e' a
@@ -40,44 +24,6 @@ data GUI = GUI {
 
 storeImpl :: IO (ListStore String)
 storeImpl = New.listStoreNew ["asdsad"]
-
--- Should go into Utils with return type IO (Maybe String)
-loadFile :: FilePath -> IO (Either AppError String)
-loadFile path = handle handler $ do
-  bracket (openFile path ReadMode) hClose (\h -> Right <$> Strict.hGetContents h)
-  where handler :: SomeException -> IO (Either AppError String)
-        handler _ = return $ Left (FileNotFound path)
-
-
-parseTransactions :: HeaderP -> String -> Either AppError [Transaction]
-parseTransactions = undefined
-{--
-selectScheme :: FilePath -> Maybe Scheme
-parseCSV :: HeaderP -> String -> Either AppError Doc
-
---}
-
-loadTransactions :: HeaderP -> FilePath -> IO (Either AppError [Transaction])
-loadTransactions headerP path = bind (parseTransactions scheme headerP) <$> (loadFile path)
-  where bind f = \x -> x >>= f
-        scheme = selectScheme path
-        {--
-  do
-    contents <- result
-    parseCSV contents
-  where parseCSV = adaptError ParseError . parse (csv headerP) path
-        bind f = \x -> x >>= f
---}
-
-readCSV :: HeaderP -> FilePath -> IO (Either AppError Doc)
-readCSV headerP path = handle handler $ do
-  bracket (openFile path ReadMode) hClose $
-    \h -> wrapError <$> parseCSV <$> Strict.hGetContents h
-  where handler :: SomeException -> IO (Either AppError Doc)
-        handler _ = return $ Left (FileNotFound path)
-        parseCSV = parse (csv headerP) path
-        wrapError (Left e) = Left $ ParseError e
-        wrapError (Right doc) = Right doc
 
 -- |Returns the GUI object represented by the glade file at specified path
 loadGUI :: FilePath -> IO GUI
@@ -100,6 +46,7 @@ connectGUI :: GUI -> IO ()
 connectGUI gui = do
   _ <- (winMain gui) `on` deleteEvent $ liftIO mainQuit >> return False
   _ <- (miQuit gui) `on` menuItemActivated $ liftIO mainQuit
+--  _ <- (miOpen gui) `on` menuItemActivated $ fileChooserDialogNew Nothing Nothing FileChooserActionOpen []
   store <- storeImpl
   treeViewSetModel (tvAccounts gui) store
   renderer <- New.cellRendererTextNew
@@ -110,13 +57,13 @@ connectGUI gui = do
   _ <- New.treeViewAppendColumn (tvAccounts gui) column
   return ()
 
-redraw :: GUI -> AppState -> IO ()
+redraw :: GUI -> GUIState -> IO ()
 redraw gui state = undefined
 
 main :: IO ()
 main = do
   _ <- initGUI
-  gui <- loadGUI "../res/layout.glade"
+  gui <- loadGUI "res/layout.glade"
   connectGUI gui
   widgetShowAll $ winMain gui
   mainGUI
