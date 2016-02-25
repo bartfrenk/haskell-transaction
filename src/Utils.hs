@@ -1,5 +1,6 @@
 module Utils
-       ( loadTransactions, gather, accumulate, showLines, LoadError(..) )
+       ( loadTransactionFile, loadTransactionFiles,
+         gather, accumulate, showLines, LoadError(..) )
        where
 
 import System.IO (openFile, IOMode(ReadMode), hClose)
@@ -25,8 +26,15 @@ injectErrorAs :: (e -> LoadError) -> Either e a -> Either LoadError a
 injectErrorAs f (Left err) = Left $ f err
 injectErrorAs _ (Right x) = Right x
 
-loadTransactions :: FilePath -> IO (Either LoadError [Transaction])
-loadTransactions path = fmap (join . (parseTs <$> scheme <*>)) input
+loadTransactionFiles :: [FilePath] -> IO [Transaction]
+loadTransactionFiles paths = do
+  tss <- mapM loadTransactionFile paths
+  return $ concat (map removeFailed tss)
+  where removeFailed (Right ts) = ts
+        removeFailed (Left _) = []
+
+loadTransactionFile :: FilePath -> IO (Either LoadError [Transaction])
+loadTransactionFile path = fmap (join . (parseTs <$> scheme <*>)) input
   where scheme = injectNothingAs UnknownScheme $ selectScheme path
         input = injectNothingAs FileNotFound <$> loadFile path
         parseTs sch inp = injectErrorAs InvalidCSV (parseTransactions sch inp)

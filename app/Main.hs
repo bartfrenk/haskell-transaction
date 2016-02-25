@@ -25,7 +25,7 @@ parseArgs _ = Nothing
 
 main' :: FilePath -> FilePath -> IO ()
 main' csvPath plotPath = do
-  result <- loadTransactions csvPath
+  result <- loadTransactionFile csvPath
   case result of
     Left FileNotFound ->
       putStrLn ("Could not open file " ++ wrap "'" csvPath ++ ".")
