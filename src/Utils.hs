@@ -1,6 +1,6 @@
 module Utils
        ( loadTransactionFile, loadTransactionFiles,
-         gather, accumulate, showLines, LoadError(..) )
+         gather, accumulate, showLines, LoadError(..), dedup )
        where
 
 import System.IO (openFile, IOMode(ReadMode), hClose)
@@ -9,6 +9,7 @@ import Control.Exception (bracket, handle, SomeException)
 import Data.Map.Lazy (empty, alter, Map)
 import Data.List (sortOn)
 import Control.Monad (join)
+import qualified Data.Set as Set
 
 import Transaction (Transaction, ParseError, parseTransactions, selectScheme)
 
@@ -56,3 +57,6 @@ accumulate :: (Ord k, Monoid m) => (a -> k) -> (a -> m) -> [a] -> [(k, m)]
 accumulate key inject xs = scanl op (head sorted) (tail sorted)
   where sorted = map (\x -> (key x, inject x)) (sortOn key xs)
         op (_, m) (h, acc) = (h, acc `mappend` m)
+
+dedup :: (Ord a) => [a] -> [a]
+dedup = Set.toList . Set.fromList

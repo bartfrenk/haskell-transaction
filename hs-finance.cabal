@@ -47,6 +47,7 @@ executable console
 executable gui
   hs-source-dirs:      app
   main-is:             GUI.hs
+  other-modules:       Core
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:       base
                      , hs-finance
@@ -55,6 +56,7 @@ executable gui
                      , mtl
                      , Chart
                      , Chart-cairo
+                     , stm
   default-language:    Haskell2010
 
 test-suite hs-finance-test

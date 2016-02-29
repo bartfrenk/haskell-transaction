@@ -2,25 +2,13 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Transaction
 
-import Utils (loadTransactionFiles, gather)
+import Utils (dedup)
+import Control.Concurrent.STM (readTVarIO)
 import Graphics.UI.Gtk
 import Graphics.UI.Gtk.ModelView as New
+import Control.Monad (forM_)
 import Control.Monad.Trans (liftIO)
-import Data.Map.Lazy (keys)
-import Control.Monad.Reader
-import Control.Monad.State
-
-data AppState = AppState {
-  stTransactions :: [Transaction],
-  stAccounts :: [Account]
-  }
-
-data AppConfig = AppConfig
-
-newtype AppMonad a = AppMonad {
-  getApp :: ReaderT AppConfig (StateT AppState IO) a
-  } deriving (Functor, Applicative, Monad, MonadIO,
-              MonadReader AppConfig, MonadState AppState)
+import Core
 
 data MainWindow = MainWindow {
   appWindow :: Window,
@@ -42,12 +30,7 @@ data GUI = GUI {
   accountStore :: ListStore Account
   }
 
-showOpenDialog :: OpenDialog -> IO ()
-showOpenDialog dlg = do
-  windowPresent (chooserDlg dlg)
-  return ()
-
--- |Returns the GUI object represented by the glade file at specified path
+-- TODO: do not need to bind all
 loadMainWindow :: Builder -> IO MainWindow
 loadMainWindow builder = MainWindow <$>
   builderGetObject builder castToWindow "main_window" <*>
@@ -76,26 +59,27 @@ createBuilder gladePath = do
   return builder
 
 -- |Connects handlers for signals.
-connectGUI :: GUI -> AppMonad ()
-connectGUI gui = do
-  liftIO $ connectMainWindow gui
-  connectOpenDialog gui
-  liftIO $ connectAccountPane gui
+connectGUI :: GUI -> AppData -> IO ()
+connectGUI gui appData = do
+  connectMainWindow gui
+  connectOpenDialog gui appData
+  connectAccountPane gui
 
 connectMainWindow :: GUI -> IO ()
 connectMainWindow (GUI mainWin openDlg _) = do
   appWindow mainWin `on` deleteEvent $ liftIO mainQuit >> return False
   quitMenuItem mainWin `on` menuItemActivated $ liftIO mainQuit
-  openMenuItem mainWin `on` menuItemActivated $ showOpenDialog openDlg
+  openMenuItem mainWin `on` menuItemActivated $
+    windowPresent (chooserDlg openDlg) >> return ()
   return ()
 
-connectOpenDialog :: GUI -> AppMonad ()
-connectOpenDialog gui = do
-  st <- Control.Monad.State.get
-  liftIO $ cancelBtn openDlg `on` buttonActivated $ (widgetHide dlg)
-  liftIO $ openBtn openDlg `on` buttonActivated $ do
+connectOpenDialog :: GUI -> AppData -> IO ()
+connectOpenDialog gui appData = do
+  cancelBtn openDlg `on` buttonActivated $ (widgetHide dlg)
+  openBtn openDlg `on` buttonActivated $ do
     paths <- fileChooserGetFilenames dlg
-    onOpenFiles gui st paths
+    runAppM (appendTransactions paths) appData
+    readTVarIO (transactionsT appData) >>= redraw gui
     widgetHide dlg
   return ()
   where openDlg = openDialog gui
@@ -114,40 +98,20 @@ connectAccountPane gui = do
   where pane = accountsPane (mainWindow gui)
         store = accountStore gui
 
-onOpenFiles :: GUI -> AppState -> [FilePath] -> IO AppState
-onOpenFiles gui st paths =
-  execStateT (runReaderT (getApp (openFiles paths >> redraw gui)) AppConfig) st
-
-openFiles :: [FilePath] -> AppMonad ()
-openFiles paths = do
-  ts <- liftIO $ loadTransactionFiles paths
-  ss <- stTransactions <$> Control.Monad.State.get
-  let accounts = gather trDest trAmount (ts ++ ss)
-  put (AppState (ts ++ ss) (keys accounts))
-  return ()
-
-redraw :: GUI -> AppMonad ()
-redraw gui = do
-  liftIO $ listStoreClear store
-  st <- Control.Monad.State.get
-  liftIO $ forM_ (stAccounts st) (listStoreAppend store)
+-- TODO: remove dependency on the internals of AppData, without
+-- allowing 'redraw' to modify the global state.
+redraw :: GUI -> [Transaction] -> IO ()
+redraw gui ts = do
+  listStoreClear store
+  let accounts = dedup (trDest <$> ts)
+  forM_ accounts (listStoreAppend store)
   where store = accountStore gui
-
-app :: AppMonad ()
-app = do
-  liftIO $ initGUI
-  gui <- liftIO $ loadGUI "res/layout.glade"
-  connectGUI gui
-  liftIO $ widgetShowAll $ appWindow (mainWindow gui)
-  liftIO $ mainGUI
-
-runApp :: AppMonad a -> IO (a, AppState)
-runApp x =
-  let st = AppState [] []
-      cfg = AppConfig
-  in runStateT (runReaderT (getApp x) cfg) st
 
 main :: IO ()
 main = do
-  runApp app
+  initGUI
+  gui <- loadGUI "res/layout.glade"
+  initAppData >>= connectGUI gui
+  widgetShowAll $ appWindow (mainWindow gui)
+  mainGUI
   return ()
