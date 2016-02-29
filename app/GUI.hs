@@ -15,9 +15,7 @@ data AppState = AppState {
   stAccounts :: [Account]
   }
 
-data AppConfig = AppConfig {
-  cfgGladePath :: FilePath
-  }
+data AppConfig = AppConfig
 
 newtype AppMonad a = AppMonad {
   getApp :: ReaderT AppConfig (StateT AppState IO) a
@@ -78,11 +76,11 @@ createBuilder gladePath = do
   return builder
 
 -- |Connects handlers for signals.
-connectGUI :: GUI -> IO ()
+connectGUI :: GUI -> AppMonad ()
 connectGUI gui = do
-  connectMainWindow gui
+  liftIO $ connectMainWindow gui
   connectOpenDialog gui
-  connectAccountPane gui
+  liftIO $ connectAccountPane gui
 
 connectMainWindow :: GUI -> IO ()
 connectMainWindow (GUI mainWin openDlg _) = do
@@ -91,12 +89,13 @@ connectMainWindow (GUI mainWin openDlg _) = do
   openMenuItem mainWin `on` menuItemActivated $ showOpenDialog openDlg
   return ()
 
-connectOpenDialog :: GUI -> IO ()
+connectOpenDialog :: GUI -> AppMonad ()
 connectOpenDialog gui = do
-  cancelBtn openDlg `on` buttonActivated $ (widgetHide dlg)
-  openBtn openDlg `on` buttonActivated $ do
-    st <- fileChooserGetFilenames dlg >>= openFiles
-    redraw gui st
+  st <- Control.Monad.State.get
+  liftIO $ cancelBtn openDlg `on` buttonActivated $ (widgetHide dlg)
+  liftIO $ openBtn openDlg `on` buttonActivated $ do
+    paths <- fileChooserGetFilenames dlg
+    onOpenFiles gui st paths
     widgetHide dlg
   return ()
   where openDlg = openDialog gui
@@ -115,26 +114,40 @@ connectAccountPane gui = do
   where pane = accountsPane (mainWindow gui)
         store = accountStore gui
 
+onOpenFiles :: GUI -> AppState -> [FilePath] -> IO AppState
+onOpenFiles gui st paths =
+  execStateT (runReaderT (getApp (openFiles paths >> redraw gui)) AppConfig) st
+
 openFiles :: [FilePath] -> AppMonad ()
 openFiles paths = do
   ts <- liftIO $ loadTransactionFiles paths
-  let accounts = gather trDest trAmount ts
-  put (AppState ts (keys accounts))
+  ss <- stTransactions <$> Control.Monad.State.get
+  let accounts = gather trDest trAmount (ts ++ ss)
+  put (AppState (ts ++ ss) (keys accounts))
   return ()
 
-initialState :: IO (ListStore Account)
-initialState = New.listStoreNew []
-
-redraw :: GUI -> AppState -> IO ()
-redraw gui st = do
-  listStoreClear store
-  forM_ (stAccounts st) (listStoreAppend store)
+redraw :: GUI -> AppMonad ()
+redraw gui = do
+  liftIO $ listStoreClear store
+  st <- Control.Monad.State.get
+  liftIO $ forM_ (stAccounts st) (listStoreAppend store)
   where store = accountStore gui
+
+app :: AppMonad ()
+app = do
+  liftIO $ initGUI
+  gui <- liftIO $ loadGUI "res/layout.glade"
+  connectGUI gui
+  liftIO $ widgetShowAll $ appWindow (mainWindow gui)
+  liftIO $ mainGUI
+
+runApp :: AppMonad a -> IO (a, AppState)
+runApp x =
+  let st = AppState [] []
+      cfg = AppConfig
+  in runStateT (runReaderT (getApp x) cfg) st
 
 main :: IO ()
 main = do
-  initGUI
-  gui <- loadGUI "res/layout.glade"
-  connectGUI gui
-  widgetShowAll $ appWindow (mainWindow gui)
-  mainGUI
+  runApp app
+  return ()
