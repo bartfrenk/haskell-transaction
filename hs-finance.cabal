@@ -22,6 +22,7 @@ library
                      , Transaction.Types
                      , Transaction.Plot
                      , Transaction.Scheme
+                     , Transaction.IO
   build-depends:       base >= 4.7 && < 5
                      , Chart
                      , strict

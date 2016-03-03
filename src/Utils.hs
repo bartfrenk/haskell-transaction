@@ -1,44 +1,23 @@
-module Utils
-       ( loadTransactionFile, loadTransactionFiles,
-         gather, accumulate, showLines, LoadError(..), dedup )
-       where
+module Utils (loadFile, gather, accumulate,
+              injectNothingAs, injectErrorAs,
+              deduplicate, wrap) where
 
 import System.IO (openFile, IOMode(ReadMode), hClose)
 import System.IO.Strict (hGetContents)
 import Control.Exception (bracket, handle, SomeException)
 import Data.Map.Lazy (empty, alter, Map)
 import Data.List (sortOn)
-import Control.Monad (join)
 import qualified Data.Set as Set
 
-import Transaction (Transaction, ParseError, parseTransactions, selectScheme)
-
-showLines :: (Show a) => [a] -> IO ()
-showLines = mapM_ (putStrLn . show)
-
-data LoadError = FileNotFound | InvalidCSV ParseError | UnknownScheme
-               deriving (Show, Eq)
-
-injectNothingAs :: LoadError -> Maybe a -> Either LoadError a
+-- |Maps nothing to an error representation.
+injectNothingAs :: e -> Maybe a -> Either e a
 injectNothingAs err Nothing = Left err
 injectNothingAs _ (Just x) = Right x
 
-injectErrorAs :: (e -> LoadError) -> Either e a -> Either LoadError a
+-- |Translates an error representation.
+injectErrorAs :: (e1 -> e2) -> Either e1 a -> Either e2 a
 injectErrorAs f (Left err) = Left $ f err
 injectErrorAs _ (Right x) = Right x
-
-loadTransactionFiles :: [FilePath] -> IO [Transaction]
-loadTransactionFiles paths = do
-  tss <- mapM loadTransactionFile paths
-  return $ concat (map removeFailed tss)
-  where removeFailed (Right ts) = ts
-        removeFailed (Left _) = []
-
-loadTransactionFile :: FilePath -> IO (Either LoadError [Transaction])
-loadTransactionFile path = fmap (join . (parseTs <$> scheme <*>)) input
-  where scheme = injectNothingAs UnknownScheme $ selectScheme path
-        input = injectNothingAs FileNotFound <$> loadFile path
-        parseTs sch inp = injectErrorAs InvalidCSV (parseTransactions sch inp)
 
 -- |Reads data from specified file immediately
 loadFile :: FilePath -> IO (Maybe String)
@@ -58,5 +37,11 @@ accumulate key inject xs = scanl op (head sorted) (tail sorted)
   where sorted = map (\x -> (key x, inject x)) (sortOn key xs)
         op (_, m) (h, acc) = (h, acc `mappend` m)
 
-dedup :: (Ord a) => [a] -> [a]
-dedup = Set.toList . Set.fromList
+-- |Returns a maximal sublist consisting of distinct elements.
+deduplicate :: (Ord a) => [a] -> [a]
+-- TODO: make this function preserve order.
+deduplicate = Set.toList . Set.fromList
+
+-- |Appends and prepends the first argument to the second.
+wrap :: [a] -> [a] -> [a]
+wrap xs ys = xs ++ ys ++ xs

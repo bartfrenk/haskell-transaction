@@ -9,19 +9,11 @@ import Graphics.Rendering.Chart.Backend.Cairo
 import Transaction
 import Utils
 
-wrap :: [a] -> [a] -> [a]
-wrap xs ys = xs ++ ys ++ xs
-
 fileOptions :: FileOptions
 fileOptions = FileOptions {
   _fo_size = (800, 600),
   _fo_format = SVG
   }
-
-
-parseArgs :: [String] -> Maybe (FilePath, FilePath)
-parseArgs (csvPath:plotPath:_) = Just (csvPath, plotPath)
-parseArgs _ = Nothing
 
 main' :: FilePath -> FilePath -> IO ()
 main' csvPath plotPath = do
@@ -40,6 +32,14 @@ main' csvPath plotPath = do
       showLines $ toList (gather trYear trAmount ts)
       let balance = plot (line "balance" [(accumulate trDate trAmount ts)])
       toFile fileOptions plotPath balance
+  where
+
+showLines :: (Show a) => [a] -> IO ()
+showLines = mapM_ (putStrLn . show)
+
+parseArgs :: [String] -> Maybe (FilePath, FilePath)
+parseArgs (csvPath:plotPath:_) = Just (csvPath, plotPath)
+parseArgs _ = Nothing
 
 main :: IO ()
 main = do

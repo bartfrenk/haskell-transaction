@@ -1,14 +1,12 @@
-module Transaction
-    ( Account, Transaction, ParseError, Scheme(..),
-      parseTransactions, selectScheme,
-      trDest, trAmount, trDate, trCat, trMonth, trYear )
-    where
+module Transaction (Account, Transaction, ParseError,
+                    Currency(..), Scheme(..), LoadError(..),
+                    loadTransactionFile, loadTransactionFiles,
+                    parseTransactions, selectScheme,
+                    trDest, trAmount, trDate, trCat,
+                    trMonth, trYear, trDebet, trCredit) where
 
 import Transaction.Scheme
 import Transaction.Types
-import Transaction.CSV (ParseError, csvContents, parseCSV)
+import Transaction.CSV
+import Transaction.IO
 
-parseTransactions :: Scheme -> String -> Either ParseError [Transaction]
-parseTransactions scheme input = do
-  doc <- parseCSV (schemeHeaderP scheme) input
-  return $ (schemeMap scheme) `map` (csvContents doc)

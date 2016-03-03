@@ -2,14 +2,15 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Transaction
 
-import Utils (dedup)
+import Utils (gather)
 import Control.Concurrent.STM (readTVarIO)
 import Graphics.UI.Gtk
-import Graphics.UI.Gtk.ModelView as New
 import Control.Monad (forM_)
 import Control.Monad.Trans (liftIO)
+import Data.Monoid (getSum)
 import Core
 
+-- TODO: clean up, no need to remember widgets once they are connected
 data MainWindow = MainWindow {
   appWindow :: Window,
   openMenuItem :: ImageMenuItem,
@@ -27,10 +28,9 @@ data OpenDialog = OpenDialog {
 data GUI = GUI {
   mainWindow :: MainWindow,
   openDialog :: OpenDialog,
-  accountStore :: ListStore Account
+  accountStore :: ListStore AccountStats
   }
 
--- TODO: do not need to bind all
 loadMainWindow :: Builder -> IO MainWindow
 loadMainWindow builder = MainWindow <$>
   builderGetObject builder castToWindow "main_window" <*>
@@ -50,7 +50,7 @@ loadGUI gladePath = do
   builder <- createBuilder gladePath
   GUI <$> loadMainWindow builder <*>
           loadOpenDialog builder <*>
-          New.listStoreNew []
+          listStoreNew []
 
 createBuilder :: FilePath -> IO Builder
 createBuilder gladePath = do
@@ -87,24 +87,34 @@ connectOpenDialog gui appData = do
 
 connectAccountPane :: GUI -> IO ()
 connectAccountPane gui = do
-  renderer <- New.cellRendererTextNew
-  column <- New.treeViewColumnNew
-  New.treeViewColumnPackStart column renderer True
   treeViewSetModel pane store
-  New.cellLayoutSetAttributes column renderer store $ \row -> [New.cellText := row]
-  New.treeViewColumnSetTitle column "Account"
-  New.treeViewAppendColumn pane column
-  return ()
+  renderer <- cellRendererTextNew
+  let append = appendColumn pane renderer store
+  append "Account" (\(account, _, _, _) -> account)
+  append "Count" (\(_, count, _, _) -> show $ getSum count)
+  append "Debet" (\(_, _, debet, _) -> show debet)
+  append "Credit" (\(_, _, _, credit) -> show credit)
   where pane = accountsPane (mainWindow gui)
         store = accountStore gui
 
+appendColumn :: TreeView -> CellRendererText -> ListStore AccountStats ->
+                String -> (AccountStats -> String) -> IO ()
+appendColumn tv rend store title f = do
+  column <- treeViewColumnNew
+  treeViewColumnPackStart column rend True
+  cellLayoutSetAttributes column rend store $
+    \summary -> [cellText := f summary]
+  treeViewColumnSetTitle column title
+  treeViewAppendColumn tv column
+  return ()
+
 -- TODO: remove dependency on the internals of AppData, without
 -- allowing 'redraw' to modify the global state.
+-- TODO: move summary function to Core
 redraw :: GUI -> [Transaction] -> IO ()
 redraw gui ts = do
   listStoreClear store
-  let accounts = dedup (trDest <$> ts)
-  forM_ accounts (listStoreAppend store)
+  forM_ (allAccountStats ts) (listStoreAppend store)
   where store = accountStore gui
 
 main :: IO ()

@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Transaction.Types (
   Transaction(..), Currency(..), Date(..), Account,
-  readTime, trMonth, trYear) where
+  readTime, trMonth, trYear, trCredit, trDebet) where
 
 import Data.Time (Day, ParseTime, LocalTime(..), TimeOfDay(..), readTime, toGregorian)
 
@@ -64,6 +64,15 @@ trYear :: Transaction -> Integer
 trYear tr = case trDate tr of
   Date day -> case toGregorian day of
     (y, _, _) -> y
+
+-- TODO: maybe collect with trCredit
+trDebet :: Transaction -> Currency
+trDebet tr = if amount > 0 then amount else 0
+  where amount = trAmount tr
+
+trCredit :: Transaction -> Currency
+trCredit tr = if amount < 0 then -amount else 0
+  where amount = trAmount tr
 
 localTimeToDate :: LocalTime -> Date
 localTimeToDate localTime = Date $ localDay localTime

@@ -1,10 +1,20 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Core where
 
-import Utils
-import Control.Concurrent.STM
+import Utils (gather)
 import Transaction
+import Control.Concurrent.STM
+import Data.Map.Lazy (toList)
 import Control.Monad.Reader
+import Data.Monoid (Sum(..))
+
+type AccountStats = (Account, Sum Integer, Currency, Currency)
+
+allAccountStats :: [Transaction] -> [AccountStats]
+allAccountStats = flatList . (gather trDest accountStats)
+  where accountStats tr = (1, trDebet tr, trCredit tr)
+        flatList as = flatten <$> toList as
+        flatten (k, (n, d, c)) = (k, n, d, c)
 
 data AppData = AppData {
   transactionsT :: TVar [Transaction]
