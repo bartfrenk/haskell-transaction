@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
 import Transaction
 
-import Utils (gather)
 import Control.Concurrent.STM (readTVarIO)
 import Graphics.UI.Gtk
 import Control.Monad (forM_)
