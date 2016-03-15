@@ -1,5 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
+
+-- TODO: maybe use MonadError for consistent error handling
+-- I think this adds a layer to the AppM monad
+
 import Transaction
 
 import Control.Concurrent.STM (readTVarIO)
