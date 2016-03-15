@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-signatures #-}
 module Transaction.CSV
-       ( ParseError, Row, Doc, HeaderP(..), (!), csv, parseCSV, csvHeader, csvContents,  )
-       where
+       ( ParseError, Row, Doc, HeaderP(..), (!), csv, parseCSV, csvHeader, csvContents,
+         getCells ) where
 
 import Text.ParserCombinators.Parsec
 
@@ -11,6 +11,9 @@ data Doc = Doc {
   csvHeader :: Maybe Row,
   csvContents :: [Row]
   }
+
+getCells :: Row -> [Cell]
+getCells (Row cells) = cells
 
 data HeaderP = HasHeader | NoHeader | AutoHeader
 

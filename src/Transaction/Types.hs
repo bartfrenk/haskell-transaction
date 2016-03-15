@@ -84,20 +84,24 @@ instance PlotValue Date where
     where ys = map dateToLocalTime xs
 
 -- |Transaction
+type Hash = String
 
 data Transaction = Transaction {
   trDest :: Account,
   trAmount :: Currency,
   trDate :: Date,
-  trCat :: Maybe Category
+  trCat :: Maybe Category,
+  trHash :: Hash -- ^ Ensures that equal transactions
+                 -- ^ came from identical rows.
   } deriving (Eq)
 
 instance Show Transaction where
-  show (Transaction dest amount date cat) = intercalate "; " fields
+  show (Transaction dest amount date cat hash) = intercalate "; " fields
     where fields = ["dest: " ++ show dest,
                     "amount: " ++ show amount,
                     "date: " ++ show date,
-                    "category: " ++ show cat]
+                    "category: " ++ show cat,
+                    "hash: " ++ show hash]
 
 instance Ord Transaction where
   s `compare` t = (trDate s) `compare` (trDate t)
