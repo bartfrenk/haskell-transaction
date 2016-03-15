@@ -1,0 +1,7 @@
+
+* Backend
+** Add unique identifier for transactions
+This might be the hash of the parsed 'Row'
+** Store unique transactions in local database
+* Frontend
+** Display cumulatives per account
