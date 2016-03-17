@@ -1,7 +1,11 @@
 
 * Backend
-** Add unique identifier for transactions
+** Add unique identifier for transactions (does not work naively)
 This might be the hash of the parsed 'Row'
+Doesn't work since transactions since a single transaction might
+be processed twice, and corrected afterwards (there is one example
+in the rabobank.csv)
+
 ** Store unique transactions in local database
 * Frontend
 ** Display cumulatives per account
