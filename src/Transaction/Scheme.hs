@@ -4,7 +4,8 @@ import System.FilePath.Posix (takeFileName)
 import Data.List (isInfixOf)
 
 import Data.Time (defaultTimeLocale, parseTimeOrError)
-import Data.Hash.MD5 (md5s, Str(..))
+import Crypto.Hash.MD5 (hash)
+import Data.ByteString.Char8 (pack)
 
 import Transaction.Types
 import Transaction.CSV (Row, HeaderP(..), (!), getCells)
@@ -29,24 +30,24 @@ replace old new text = map substitute text
   where substitute c = if (c == old) then new else c
 
 triodosMap :: Row -> Transaction
-triodosMap row = Transaction dest amount date Nothing hash
+triodosMap row = Transaction dest amount date Nothing digest
   where dest = row ! 1
         amount = m $ read (replace ',' '.' (row ! 2))
         date = parseTimeOrError True defaultTimeLocale "%d-%m-%Y" (row ! 0)
         m x = if row ! 3 == "Debet" then -x else x
-        hash = md5s $ Str $ concat (getCells row)
+        digest = hash $ pack $ concat (getCells row)
 
 rabobankMap :: Row -> Transaction
-rabobankMap row = Transaction dest amount date Nothing hash
+rabobankMap row = Transaction dest amount date Nothing digest
   where dest = row ! 0
         amount = m $ read (row ! 4)
         date = parseTimeOrError True defaultTimeLocale "%Y%m%d" (row ! 2)
         m x = if (row ! 3) == "D" then -x else x
-        hash = md5s $ Str $ concat (getCells row)
+        digest = hash $ pack $ concat (getCells row)
 
 schemes :: AList String Scheme
 schemes = [("triodos", Scheme triodosMap HasHeader),
-           ("rabobank", Scheme rabobankMap HasHeader)]
+           ("rabobank", Scheme rabobankMap NoHeader)]
 
 selectScheme :: FilePath -> Maybe Scheme
 selectScheme path = findFirst schemes (filename `contains`)

@@ -9,6 +9,7 @@ import Graphics.Rendering.Chart.Axis.Types
 import Graphics.Rendering.Chart.Axis.LocalTime ()
 import Graphics.Rendering.Chart.Axis.Floating ()
 
+import Data.ByteString (ByteString)
 import Data.Decimal
 import Text.Read (Read(..))
 import Data.List (intercalate)
@@ -84,7 +85,7 @@ instance PlotValue Date where
     where ys = map dateToLocalTime xs
 
 -- |Transaction
-type Hash = String
+type Hash = ByteString
 
 data Transaction = Transaction {
   trDest :: Account,
