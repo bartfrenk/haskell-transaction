@@ -1,8 +1,8 @@
-module Transaction (Account, Transaction, ParseError,
-                    Currency(..), Scheme(..), LoadError(..),
+module Transaction (Account, Transaction(..), ParseError,
+                    Currency(..), Scheme(..), LoadError(..), Date(..),
                     loadTransactionFile, loadTransactionFiles,
                     parseTransactions, selectScheme,
-                    trDest, trAmount, trDate, trCat,
+                    --trDest, trAmount, trDate, trCat,
                     trMonth, trYear, trDebet, trCredit,
                     connectDB, prepareDB, insertTransactions,
                     getTransactions) where

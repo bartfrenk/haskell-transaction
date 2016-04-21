@@ -1,4 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Transaction.Types (
   Transaction(..), Currency(..), Date(..), Account,
   readTime, trMonth, trYear, trCredit, trDebet) where
@@ -14,6 +18,8 @@ import Data.Decimal
 import Text.Read (Read(..))
 import Data.List (intercalate)
 import Numeric (showFFloat)
+import Data.Aeson.Types
+import GHC.Generics
 
 import Transaction.Plot (transformAxisData)
 
@@ -23,6 +29,9 @@ type Category = String
 -- |Currency
 
 newtype Currency = Currency Decimal deriving (Eq, Ord, Num)
+
+instance ToJSON Currency where
+  toJSON = toJSON . currencyToDouble
 
 instance Monoid Currency where
   mempty = Currency 0
@@ -52,6 +61,14 @@ instance Read Currency where
 -- |Date
 
 newtype Date = Date Day deriving (Eq, Ord, Show, Read, ParseTime)
+
+instance ToJSON Date where
+  toJSON (Date day) = object [
+      "day" .= dd,
+      "month" .= mm,
+      "year" .= yy
+    ]
+    where (yy, mm, dd) = toGregorian day
 
 dateToLocalTime :: Date -> LocalTime
 dateToLocalTime (Date day) = LocalTime day $ TimeOfDay 0 0 0
@@ -94,7 +111,12 @@ data Transaction = Transaction {
   trCat :: Maybe Category,
   trHash :: Hash -- ^ Ensures that equal transactions
                  -- ^ came from identical rows.
-  } deriving (Eq)
+  } deriving (Eq, Generic)
+
+instance ToJSON Transaction
+
+instance ToJSON ByteString where
+  toJSON bs = toJSON (show bs)
 
 instance Show Transaction where
   show (Transaction dest amount date cat hash) = intercalate "; " fields
