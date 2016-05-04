@@ -9,21 +9,26 @@
 
 import Servant
 import Transaction
-import Data.Time.Calendar (fromGregorian)
-import Data.ByteString.Char8 (pack)
 import Network.Wai.Handler.Warp
 import Network.Wai
+import Control.Monad.Trans (liftIO)
 
 type API = "account" :> Get '[JSON] [Transaction]
+
+databasePath :: FilePath
+databasePath = "test.db"
 
 main :: IO ()
 main = run 8081 app
 
+getTransactions' :: IO [Transaction]
+getTransactions' = do
+  ts <- getTransactions databasePath
+  -- putStrLn $ show (length ts)
+  return ts
+
 server :: Server API
-server = return [Transaction "A" amount (Date day) Nothing hash]
-  where day = fromGregorian 2016 2 3
-        amount = Currency 10
-        hash = pack "Hello"
+server = liftIO $ getTransactions databasePath
 
 api :: Proxy API
 api = Proxy

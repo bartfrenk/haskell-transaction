@@ -27,9 +27,12 @@ main' csvPath plotPath = do
       putStrLn ("Unable to determine transaction format for " ++ wrap "'" csvPath ++ ".")
     Right ts' -> do
       let ts = sort ts'
+      ts'' <- getTransactions "test.db"
       showLines $ toList (gather trDest trAmount ts)
       showLines $ toList (gather trMonth trAmount ts)
       showLines $ toList (gather trYear trAmount ts)
+      putStrLn $ show (length ts'')
+      putStrLn $ show (length ts)
       let balance = plot (line "balance" [(accumulate trDate trAmount ts)])
       toFile fileOptions plotPath balance
   where
